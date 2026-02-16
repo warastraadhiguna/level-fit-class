@@ -75,7 +75,7 @@ class BookingController extends Controller
 
         if ($bookedCount >= (int) $schedule->capacity) {
             return redirect()->to(url()->previous() . '#schedule')
-                ->with('auth_error', 'Kelas sudah penuh.');
+                ->with('error', 'Kelas sudah penuh.');
         }
 
         // simpan booking => status default 1 (berangkat)
@@ -101,7 +101,7 @@ class BookingController extends Controller
         $classDate = Carbon::parse($schedule->class_date)->startOfDay();
 
         if (!($classDate->equalTo($today) || $classDate->equalTo($tomorrow))) {
-            return redirect()->to(url()->previous() . '#schedule')->with('auth_error', 'Cancel hanya bisa untuk hari ini atau besok.');
+            return redirect()->to(url()->previous() . '#schedule')->with('error', 'Cancel hanya bisa untuk hari ini atau besok.');
         }
 
         $booking = ClassDetail::where('class_schedule_id', $schedule->id)
@@ -110,7 +110,7 @@ class BookingController extends Controller
             ->first();
 
         if (! $booking) {
-            return redirect()->to(url()->previous() . '#schedule')->with('auth_error', 'Booking tidak ditemukan / sudah dibatalkan.');
+            return redirect()->to(url()->previous() . '#schedule')->with('error', 'Booking tidak ditemukan / sudah dibatalkan.');
         }
 
         $booking->update(['canceled_at' => now()]);
