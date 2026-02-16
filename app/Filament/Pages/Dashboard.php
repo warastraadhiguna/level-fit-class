@@ -3,7 +3,6 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\DashboardStats;
-use App\Filament\Widgets\InfoTable;
 use Filament\Pages\Page;
 
 class Dashboard extends Page

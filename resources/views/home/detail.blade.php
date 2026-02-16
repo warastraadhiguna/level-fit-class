@@ -495,12 +495,10 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    @if(auth('member')->check())
                     <li class="nav-item"><a class="nav-link" href="#home">Home</a></li>
                     {{-- <li class="nav-item"><a class="nav-link" href="#classes">Kelas</a></li> --}}
                     <li class="nav-item"><a class="nav-link" href="#schedule">Jadwal</a></li>
                     {{-- <li class="nav-item"><a class="nav-link" href="#trainers">Trainer</a></li> --}}
-                    @endif
                     <li class="nav-item" id="authContainer">
                     @if(auth('member')->check())
                         @php $m = auth('member')->user(); @endphp
@@ -535,13 +533,7 @@
         <div class="container text-center">
             <h1 class="hero-title">Unlock Your<br><span>True Potential</span></h1>
             <p class="lead mb-4 text-white-50">Bergabung dengan komunitas {{ $branchStore->name }} terbaik. Latihan keras, hasil nyata.</p>
-            @if(auth('member')->check())
-                <a href="#schedule" class="btn btn-cta">Booking Kelas Sekarang</a>
-            @else
-                <button  class="btn btn-cta" data-bs-toggle="modal" data-bs-target="#loginModal">
-                    <i class="fa-solid fa-user me-2"></i> Login untuk Booking Class
-                </button>            
-            @endif
+            <a href="#schedule" class="btn btn-cta">Booking Kelas Sekarang</a>
         </div>
     </section>
 
@@ -731,47 +723,67 @@
                                 $items = $scheduleGrid[$time][$dayNum] ?? [];
                             @endphp
 
-                            <td>
-                                @forelse($items as $sc)
-                                    <div class="schedule-pill {{ $pillClass }} mb-2">
-                                        <div class="fw-bold">{{ $sc->name }}</div>
-                                        <small class="text-muted">
-                                            • {{ \Carbon\Carbon::parse($sc->time_start)->format('H:i') }}–{{ \Carbon\Carbon::parse($sc->time_end)->format('H:i') }}
-                                        </small>
+                        <td>
+                            @forelse($items as $sc)
+                                @php
+                                    // waktu kelas
+                                    $classStart = \Carbon\Carbon::parse($sc->class_date.' '.$sc->time_start);
+                                    $classEnd   = \Carbon\Carbon::parse($sc->class_date.' '.$sc->time_end);
 
-                                        @if($isSoon)
-                                            @if(auth('member')->check())
-                                                @php
-                                                    $isBooked = \App\Models\ClassDetail::where('class_schedule_id', $sc->id)
-                                                        ->where('member_id', auth('member')->id())
-                                                        ->whereNull('canceled_at')
-                                                        ->exists();
-                                                @endphp
+                                    // batas booking: maksimal 1 jam sebelum mulai
+                                    $bookingDeadline = $classStart->copy()->subHour();
 
-                                                @if($isBooked)
-                                                    <form method="POST" action="{{ route('booking.cancel') }}" class="mt-2">
-                                                        @csrf
-                                                        <input type="hidden" name="class_schedule_id" value="{{ $sc->id }}">
-                                                        <button class="btn btn-sm btn-outline-danger w-100" type="submit">Cancel</button>
-                                                    </form>
-                                                @else
-                                                    <form method="POST" action="{{ route('booking.store') }}" class="mt-2">
-                                                        @csrf
-                                                        <input type="hidden" name="class_schedule_id" value="{{ $sc->id }}">
-                                                        <button class="btn btn-sm btn-dark w-100" type="submit">Book</button>
-                                                    </form>
-                                                @endif
+                                    // status waktu
+                                    $canBookNow = now()->lt($bookingDeadline); // masih sebelum deadline
+                                @endphp
+
+                                <div class="schedule-pill {{ $pillClass }} mb-2">
+                                    <div class="fw-bold">{{ $sc->name }}</div>
+                                    <small class="text-muted">
+                                        • {{ \Carbon\Carbon::parse($sc->time_start)->format('H:i') }}–{{ \Carbon\Carbon::parse($sc->time_end)->format('H:i') }}
+                                    </small>
+
+                                    {{-- Tombol hanya muncul untuk Today/Tomorrow + masih sebelum deadline --}}
+                                    @if($isSoon && $canBookNow)
+                                        @if(auth('member')->check())
+                                            @php
+                                                $isBooked = \App\Models\ClassDetail::where('class_schedule_id', $sc->id)
+                                                    ->where('member_id', auth('member')->id())
+                                                    ->whereNull('canceled_at')
+                                                    ->exists();
+                                            @endphp
+
+                                            @if($isBooked)
+                                                <form method="POST" action="{{ route('booking.cancel') }}" class="mt-2">
+                                                    @csrf
+                                                    <input type="hidden" name="class_schedule_id" value="{{ $sc->id }}">
+                                                    <button class="btn btn-sm btn-outline-danger w-100" type="submit">Cancel</button>
+                                                </form>
                                             @else
-                                                <button class="btn btn-sm btn-dark w-100 mt-2" data-bs-toggle="modal" data-bs-target="#loginModal">
-                                                    Login untuk booking
-                                                </button>
+                                                <form method="POST" action="{{ route('booking.store') }}" class="mt-2">
+                                                    @csrf
+                                                    <input type="hidden" name="class_schedule_id" value="{{ $sc->id }}">
+                                                    <button class="btn btn-sm btn-dark w-100" type="submit">Book</button>
+                                                </form>
                                             @endif
+                                        @else
+                                            <button class="btn btn-sm btn-dark w-100 mt-2" data-bs-toggle="modal" data-bs-target="#loginModal">
+                                                Login untuk booking
+                                            </button>
                                         @endif
-                                    </div>
-                                @empty
-                                    {{-- kosong --}}
-                                @endforelse
-                            </td>
+
+                                    {{-- Kalau sudah mendekati kelas (kurang dari 1 jam) / sudah mulai --}}
+                                    @elseif($isSoon && !$canBookNow)
+                                        <div class="mt-2 text-muted small">
+                                            Closed (maks. booking 1 jam sebelum)
+                                        </div>
+                                    @endif
+                                </div>
+                            @empty
+                                {{-- kosong --}}
+                            @endforelse
+                        </td>
+
                         @endforeach
                     </tr>
                     @endforeach

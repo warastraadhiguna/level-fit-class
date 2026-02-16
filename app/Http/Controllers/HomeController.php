@@ -19,24 +19,57 @@ class HomeController extends Controller
     {
         $branchStore = BranchStore::where('slug', $slug)->firstOrFail();
 
-        // A) Tentukan minggu ini (Senin sebagai awal minggu)
-        $start = now()->startOfWeek(Carbon::MONDAY);
+        // 1) Tentukan tanggal "base"
+        // - Jika hari ini Sabtu/Minggu => base = hari ini
+        // - Selain itu => base = Senin minggu ini
+        $today = now()->startOfDay();
+        $base = $today->copy();
 
-        // B) Pastikan schedule minggu ini sudah dibuat (copy dari template ClassSession)
-        $this->ensureWeekSchedules($branchStore->id, $start);
+        if ($today->isoWeekday() < 6) { // 1=Senin..5=Jumat
+            $base = $today->copy()->startOfWeek(Carbon::MONDAY);
+        }
 
-        // C) Ambil semua ClassSchedule minggu ini untuk ditampilkan
-        $weekStart = $start->copy()->toDateString();
-        $weekEnd   = $start->copy()->addDays(6)->toDateString();
+        // 2) Susun tanggal header per kolom (dayNum kamu: Minggu=1, Senin=2, dst)
+        // Weekend mode: Sabtu/Minggu sekarang + Senin-Jumat minggu depan
+        if ($today->isoWeekday() >= 6) { // 6=Sabtu, 7=Minggu
+            $weekDates = [
+                2 => $base->copy()->addDays(2), // Senin (weekend+2)
+                3 => $base->copy()->addDays(3), // Selasa
+                4 => $base->copy()->addDays(4), // Rabu
+                5 => $base->copy()->addDays(5), // Kamis
+                6 => $base->copy()->addDays(6), // Jumat
+                7 => $base->copy(),             // Sabtu (hari ini)
+                1 => $base->copy()->addDay(),   // Minggu (besok)
+            ];
+        } else {
+            // Weekday mode: Senin..Minggu minggu ini normal
+            $weekDates = [
+                2 => $base->copy(),              // Senin
+                3 => $base->copy()->addDay(),     // Selasa
+                4 => $base->copy()->addDays(2),   // Rabu
+                5 => $base->copy()->addDays(3),   // Kamis
+                6 => $base->copy()->addDays(4),   // Jumat
+                7 => $base->copy()->addDays(5),   // Sabtu
+                1 => $base->copy()->addDays(6),   // Minggu
+            ];
+        }
 
-        $schedules = ClassSchedule::with(['classInstructor']) // optional
+        // 3) Pastikan schedule tanggal-tanggal ini sudah ada (copy dari ClassSession)
+        $this->ensureWeekSchedules($branchStore->id, $weekDates);
+
+        // 4) Range query harus pakai MIN/MAX dari tanggal yang tampil
+        $weekStart = collect($weekDates)->min()->toDateString();
+        $weekEnd   = collect($weekDates)->max()->toDateString();
+
+        // 5) Ambil semua ClassSchedule dalam range itu
+        $schedules = ClassSchedule::with(['classInstructor'])
             ->where('branch_store_id', $branchStore->id)
             ->whereBetween('class_date', [$weekStart, $weekEnd])
-            ->where('is_active', 1)
+            ->whereHas('classSession', fn ($q) => $q->where('is_active', 1))
             ->orderBy('time_start')
             ->get();
 
-        // D) Header hari (urut Senin..Minggu) sesuai mapping kamu (Minggu=1)
+        // 6) Header hari (urut Senin..Minggu) sesuai mapping kamu (Minggu=1)
         $days = [
             2 => 'Senin',
             3 => 'Selasa',
@@ -47,64 +80,49 @@ class HomeController extends Controller
             1 => 'Minggu',
         ];
 
-        // E) Tanggal untuk header (Senin minggu ini dst)
-        $weekDates = [
-            2 => $start->copy(),              // Senin
-            3 => $start->copy()->addDay(),     // Selasa
-            4 => $start->copy()->addDays(2),   // Rabu
-            5 => $start->copy()->addDays(3),   // Kamis
-            6 => $start->copy()->addDays(4),   // Jumat
-            7 => $start->copy()->addDays(5),   // Sabtu
-            1 => $start->copy()->addDays(6),   // Minggu
-        ];
+        // 7) Slot jam unik
+        $timeSlots = $schedules
+            ->map(fn($x) => Carbon::parse($x->time_start)->format('H:i'))
+            ->unique()
+            ->sort()
+            ->values();
 
-        // F) Ambil slot jam unik
-        $timeSlots = $schedules->map(fn($x) => Carbon::parse($x->time_start)->format('H:i'))
-            ->unique()->sort()->values();
+        // 8) Map tanggal->dayNum agar grid cocok walaupun tanggal campur (weekend mode)
+        $dateToDayNum = [];
+        foreach ($weekDates as $dayNum => $dt) {
+            $dateToDayNum[$dt->toDateString()] = $dayNum;
+        }
 
-        // G) Bentuk grid jadwal: scheduleGrid[time][dayNum] = list schedule
+        // 9) Bentuk grid jadwal: scheduleGrid[time][dayNum] = list schedule
         $scheduleGrid = [];
-
         foreach ($schedules as $sc) {
             $time = Carbon::parse($sc->time_start)->format('H:i');
+            $dayNum = $dateToDayNum[$sc->class_date] ?? null;
 
-            // Tentukan dayNum dari class_date
-            $iso = Carbon::parse($sc->class_date)->isoWeekday(); // 1=Mon..7=Sun
-            $dayNum = match ($iso) {
-                1 => 2, // Mon -> Senin (2)
-                2 => 3,
-                3 => 4,
-                4 => 5,
-                5 => 6,
-                6 => 7,
-                7 => 1, // Sun -> Minggu (1)
-            };
+            if (!$dayNum) continue;
 
             $scheduleGrid[$time][$dayNum][] = $sc;
         }
 
-        return view("home.detail", compact('branchStore', 'days', 'timeSlots', 'scheduleGrid','weekDates'));    
-    }    
-
-    private function ensureWeekSchedules(int $branchStoreId, Carbon $startOfWeek): void
+        return view("home.detail", compact(
+            'branchStore',
+            'days',
+            'timeSlots',
+            'scheduleGrid',
+            'weekDates'
+        ));
+    }
+    private function ensureWeekSchedules(int $branchStoreId, array $weekDates): void
     {
-        // mapping day template (Minggu=1, Senin=2, ...) ke offset dari Senin
-        $offset = [
-            2 => 0, // Senin
-            3 => 1,
-            4 => 2,
-            5 => 3,
-            6 => 4,
-            7 => 5,
-            1 => 6, // Minggu
-        ];
-
         $sessions = ClassSession::where('branch_store_id', $branchStoreId)
             ->where('is_active', 1)
             ->get();
 
         foreach ($sessions as $s) {
-            $date = $startOfWeek->copy()->addDays($offset[$s->day])->toDateString();
+            // $s->day: Minggu=1, Senin=2, dst
+            if (!isset($weekDates[$s->day])) continue;
+
+            $date = $weekDates[$s->day]->toDateString();
 
             ClassSchedule::firstOrCreate(
                 [
@@ -123,5 +141,5 @@ class HomeController extends Controller
                 ]
             );
         }
-    }    
+    }
 }

@@ -17,7 +17,7 @@ use Filament\Tables\Table;
 class BranchStoreResource extends Resource
 {
     protected static ?string $model = BranchStore::class;
-
+    protected static bool $shouldRegisterNavigation = false;
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function form(Schema $schema): Schema
