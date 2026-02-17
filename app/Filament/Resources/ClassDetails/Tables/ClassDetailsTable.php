@@ -26,10 +26,7 @@ class ClassDetailsTable
                     ClassSchedule::select('name')
                         ->whereColumn('class_schedules.id', 'class_details.class_schedule_id'),
                     'asc'
-                )
-                ->whereHas('classSchedule', fn (Builder $sq) =>
-                    $sq->whereBetween('class_date', [now()->startOfWeek(), now()->endOfWeek()])
-                )                
+                )           
             )  
             ->columns([
                 TextColumn::make('classSchedule.name')
