@@ -16,6 +16,7 @@ class ClassDetail extends Model
         'name',        
         'phone',   
         'email',
+        'status',
         'canceled_at'
     ];
 

@@ -96,6 +96,16 @@ class ClassDetailsTable
                             'canceled_at' => $state ? now() : null,
                         ]);
                     }),
+                ToggleColumn::make('status')
+                    ->label('Attendance')
+                    ->onIcon('heroicon-m-check')
+                    ->offIcon('heroicon-m-x-mark')
+                    ->getStateUsing(fn ($record): bool => (int) $record->status === 1)
+                    ->updateStateUsing(function ($record, bool $state): void {
+                        $record->update([
+                            'status' => $state ? 1 : 0,
+                        ]);
+                    })           
                 //     ->sortable(),
                 // TextColumn::make('created_at')
                 //     ->dateTime()
