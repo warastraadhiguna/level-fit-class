@@ -16,7 +16,14 @@ class BookingController extends Controller
         ]);
 
         $member = Auth::guard('member')->user();
-        $schedule = ClassSchedule::findOrFail($data['class_schedule_id']);
+
+        // dd();
+        $schedule = ClassSchedule::with('branchStore')->findOrFail($data['class_schedule_id']);
+
+        if($member->branch_store_id != $schedule->branchStore->id){
+            return redirect()->to(url()->previous() . '#schedule')
+                ->with('error', 'Member dari cabang lain, tidak dapat booking di cabang ini..');
+        }
 
         $today    = now()->startOfDay();
         $tomorrow = now()->copy()->addDay()->startOfDay();
