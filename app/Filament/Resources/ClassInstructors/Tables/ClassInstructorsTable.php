@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\ClassInstructors\Tables;
 
-use Filament\Actions\BulkActionGroup;
+use App\Filament\Resources\ClassInstructors\ClassInstructorResource;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class ClassInstructorsTable
@@ -37,11 +39,17 @@ class ClassInstructorsTable
                 //     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make()                
+                EditAction::make()
+                    ->visible(fn () => ClassInstructorResource::isAdmin()),
+                DeleteAction::make()
+                    ->visible(fn ($record) => ClassInstructorResource::isAdmin() && ! $record->trashed()),
+                RestoreAction::make()
+                    ->visible(fn ($record) => ClassInstructorResource::isAdmin() && $record->trashed()),
+                ForceDeleteAction::make()
+                    ->visible(fn ($record) => ClassInstructorResource::isAdmin() && $record->trashed()),
             ])
             ->toolbarActions([
             ]);

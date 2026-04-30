@@ -11,6 +11,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -114,6 +115,40 @@ class ClassDetailsTable
                 //     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('class_schedule_id')
+                    ->label('Class Schedule')
+                    ->searchable()
+                    ->preload()
+                    ->options(fn () => ClassSchedule::query()
+                        ->with(['branchStore', 'classSession'])
+                        ->orderByDesc('class_date')
+                        ->orderBy('time_start')
+                        ->limit(200)
+                        ->get()
+                        ->mapWithKeys(function (ClassSchedule $schedule): array {
+                            $dayName = $schedule->class_date
+                                ? Carbon::parse($schedule->class_date)->locale('id')->isoFormat('dddd')
+                                : '-';
+
+                            $date = $schedule->class_date
+                                ? Carbon::parse($schedule->class_date)->format('d/m/Y')
+                                : '-';
+
+                            $start = $schedule->time_start
+                                ? Carbon::parse($schedule->time_start)->format('H:i')
+                                : '--:--';
+
+                            $end = $schedule->time_end
+                                ? Carbon::parse($schedule->time_end)->format('H:i')
+                                : '--:--';
+
+                            $branch = $schedule->branchStore?->name ?? '-';
+                            $status = $schedule->is_active ? 'Aktif' : 'Libur';
+
+                            return [
+                                $schedule->id => "{$schedule->name} - {$dayName}, {$date} {$start}-{$end} ({$branch}) [{$status}]",
+                            ];
+                        })),
                 Filter::make('class_date_range')
                     ->label('Tanggal')
                     ->form([

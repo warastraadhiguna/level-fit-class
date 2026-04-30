@@ -62,10 +62,13 @@ class HomeController extends Controller
         $weekEnd   = collect($weekDates)->max()->toDateString();
 
         // 5) Ambil semua ClassSchedule dalam range itu
-        $schedules = ClassSchedule::with(['classInstructor'])
+        $schedules = ClassSchedule::with(['classInstructor', 'classSession'])
+            ->withCount([
+                'classDetails as booked_count' => fn ($q) => $q
+                    ->whereNull('canceled_at'),
+            ])
             ->where('branch_store_id', $branchStore->id)
             ->whereBetween('class_date', [$weekStart, $weekEnd])
-            ->whereHas('classSession', fn ($q) => $q->where('is_active', 1))
             ->orderBy('time_start')
             ->get();
 
@@ -115,7 +118,6 @@ class HomeController extends Controller
     private function ensureWeekSchedules(int $branchStoreId, array $weekDates): void
     {
         $sessions = ClassSession::where('branch_store_id', $branchStoreId)
-            ->where('is_active', 1)
             ->get();
 
         foreach ($sessions as $s) {
@@ -124,12 +126,15 @@ class HomeController extends Controller
 
             $date = $weekDates[$s->day]->toDateString();
 
-            ClassSchedule::firstOrCreate(
+            $schedule = ClassSchedule::firstOrNew(
                 [
                     'class_session_id' => $s->id,
                     'class_date' => $date,
-                ],
-                [
+                ]
+            );
+
+            if (! $schedule->exists) {
+                $schedule->fill([
                     'branch_store_id' => $branchStoreId,
                     'class_instructor_id' => $s->class_instructor_id ?? null,
                     'name' => $s->name,
@@ -137,9 +142,11 @@ class HomeController extends Controller
                     'capacity' => $s->capacity,
                     'time_start' => $s->time_start,
                     'time_end' => $s->time_end,
-                    'is_active' => 1,
-                ]
-            );
+                ]);
+            }
+
+            $schedule->is_active = (bool) $s->is_active;
+            $schedule->save();
         }
     }
 }

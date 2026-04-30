@@ -2,10 +2,14 @@
 
 namespace App\Filament\Resources\ClassSessions\Tables;
 
+use App\Filament\Resources\ClassSessions\ClassSessionResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -48,7 +52,13 @@ class ClassSessionsTable
                     ->sortable(),
                 ToggleColumn::make('is_active')
                     ->label('Status')
-                    ->sortable()               
+                    ->sortable()
+                    ->disabled(fn ($record) => $record->trashed())
+                    ->updateStateUsing(function ($record, bool $state): bool {
+                        $record->forceFill(['is_active' => $state])->save();
+
+                        return $state;
+                    })
                 // TextColumn::make('created_at')
                 //     ->dateTime()
                 //     ->sortable()
@@ -59,11 +69,17 @@ class ClassSessionsTable
                 //     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(fn () => ClassSessionResource::isAdmin()),
                 DeleteAction::make()
+                    ->visible(fn ($record) => ClassSessionResource::isAdmin() && ! $record->trashed()),
+                RestoreAction::make()
+                    ->visible(fn ($record) => ClassSessionResource::isAdmin() && $record->trashed()),
+                ForceDeleteAction::make()
+                    ->visible(fn ($record) => ClassSessionResource::isAdmin() && $record->trashed()),
             ])
             ->toolbarActions([
 

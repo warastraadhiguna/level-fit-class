@@ -20,6 +20,10 @@ class ClassDetail extends Model
         'canceled_at'
     ];
 
+    protected $attributes = [
+        'status' => 0,
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

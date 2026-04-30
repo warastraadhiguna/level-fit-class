@@ -479,6 +479,24 @@
         border-left-color: #cfcfcf;
         }
 
+        .pill-off{
+        background: #f1f1f1;
+        border-left-color: #777;
+        opacity: .85;
+        }
+
+        .schedule-meta {
+        margin-top: 6px;
+        font-size: 12px;
+        line-height: 1.35;
+        color: #555;
+        }
+
+        .schedule-meta i {
+        width: 14px;
+        color: var(--primary-red);
+        }
+
     </style>
 </head>
 <body>
@@ -718,7 +736,6 @@
 
                                 $isPast = $cellDate->lt($today);
                                 $isSoon = $cellDate->equalTo($today) || $cellDate->equalTo($tomorrow);
-                                $pillClass = $isPast ? 'pill-past' : ($isSoon ? 'pill-soon' : 'pill-future');
 
                                 $items = $scheduleGrid[$time][$dayNum] ?? [];
                             @endphp
@@ -735,6 +752,12 @@
 
                                     // status waktu
                                     $canBookNow = now()->lt($bookingDeadline); // masih sebelum deadline
+
+                                    $isClassOff = ! (bool) $sc->is_active || ! (bool) ($sc->classSession?->is_active ?? true);
+                                    $pillClass = $isClassOff ? 'pill-off' : ($isPast ? 'pill-past' : ($isSoon ? 'pill-soon' : 'pill-future'));
+                                    $capacity = (int) $sc->capacity;
+                                    $bookedCount = (int) ($sc->booked_count ?? 0);
+                                    $remainingQuota = max($capacity - $bookedCount, 0);
                                 @endphp
 
                                 <div class="schedule-pill {{ $pillClass }} mb-2">
@@ -742,9 +765,29 @@
                                     <small class="text-muted">
                                         • {{ \Carbon\Carbon::parse($sc->time_start)->format('H:i') }}–{{ \Carbon\Carbon::parse($sc->time_end)->format('H:i') }}
                                     </small>
+                                    <div class="schedule-meta">
+                                        <div>
+                                            <i class="fa-solid fa-user-tie me-1"></i>
+                                            {{ $sc->classInstructor?->full_name ?? 'Trainer belum ditentukan' }}
+                                        </div>
+                                        <div>
+                                            <i class="fa-solid fa-ticket me-1"></i>
+                                            Sisa {{ $remainingQuota }} dari {{ $capacity }} quota
+                                        </div>
+                                    </div>
+
+                                    @if($isClassOff)
+                                        <div class="mt-2 text-muted small">
+                                            Kelas libur (tidak bisa dibooking)
+                                        </div>
+
+                                    @elseif($isPast)
+                                        <div class="mt-2 text-muted small">
+                                            Selesai
+                                        </div>
 
                                     {{-- Tombol hanya muncul untuk Today/Tomorrow + masih sebelum deadline --}}
-                                    @if($isSoon && $canBookNow)
+                                    @elseif($isSoon && $canBookNow)
                                         @if(auth('member')->check())
                                             @php
                                                 $isBooked = \App\Models\ClassDetail::where('class_schedule_id', $sc->id)
@@ -776,6 +819,11 @@
                                     @elseif($isSoon && !$canBookNow)
                                         <div class="mt-2 text-muted small">
                                             Closed (maks. booking 1 jam sebelum)
+                                        </div>
+
+                                    @else
+                                        <div class="mt-2 text-muted small">
+                                            Booking dibuka H-1
                                         </div>
                                     @endif
                                 </div>

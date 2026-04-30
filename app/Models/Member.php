@@ -49,11 +49,6 @@ class Member extends Authenticatable
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function members()
-    {
-        return $this->hasMany(Member::class);
-    }
-
     public function bookings()
     {
         return $this->hasMany(\App\Models\ClassDetail::class);

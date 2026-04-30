@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class ClassInstructorResource extends Resource
 {
@@ -30,6 +31,51 @@ class ClassInstructorResource extends Resource
     public static function table(Table $table): Table
     {
         return ClassInstructorsTable::configure($table);
+    }
+
+    public static function isAdmin(): bool
+    {
+        return (bool) auth()->user()?->isAdmin();
+    }
+
+    public static function canCreate(): bool
+    {
+        return static::isAdmin();
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return static::isAdmin();
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return static::isAdmin();
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return static::isAdmin();
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        return static::isAdmin();
+    }
+
+    public static function canForceDeleteAny(): bool
+    {
+        return static::isAdmin();
+    }
+
+    public static function canRestore(Model $record): bool
+    {
+        return static::isAdmin();
+    }
+
+    public static function canRestoreAny(): bool
+    {
+        return static::isAdmin();
     }
 
     public static function getRelations(): array

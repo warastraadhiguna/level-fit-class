@@ -23,7 +23,9 @@ class User extends Authenticatable  implements FilamentUser, HasName
      */
     protected $fillable = [
         'name',
+        'full_name',
         'email',
+        'role',
         'password',
     ];
 
@@ -59,5 +61,10 @@ class User extends Authenticatable  implements FilamentUser, HasName
     {
         // sesuaikan: name / full_name / email
         return (string) ($this->name ?? $this->full_name ?? $this->email ?? 'User');
-    }    
+    }
+
+    public function isAdmin(): bool
+    {
+        return strtoupper((string) $this->role) === 'ADMIN';
+    }
 }

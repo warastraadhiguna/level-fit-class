@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassDetail;
 use App\Models\ClassSchedule;
+use App\Models\Member;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 class BookingController extends Controller
 {
     public function store(Request $request)
@@ -18,11 +20,18 @@ class BookingController extends Controller
         $member = Auth::guard('member')->user();
 
         // dd();
-        $schedule = ClassSchedule::with('branchStore')->findOrFail($data['class_schedule_id']);
+        $schedule = ClassSchedule::with(['branchStore', 'classSession'])->findOrFail($data['class_schedule_id']);
 
-        if($member->branch_store_id != $schedule->branchStore->id){
+        if (! $schedule->is_active || ! ($schedule->classSession?->is_active ?? false)) {
             return redirect()->to(url()->previous() . '#schedule')
-                ->with('error', 'Member dari cabang lain, tidak dapat booking di cabang ini..');
+                ->with('error', 'Kelas sedang libur dan tidak bisa dibooking.');
+        }
+
+        $activeMembership = $this->getEligibleActiveMembership($member, (int) $schedule->branchStore->id);
+
+        if (! $activeMembership) {
+            return redirect()->to(url()->previous() . '#schedule')
+                ->with('error', 'Booking ditolak. Membership harus aktif dan paket harus sesuai cabang ini atau bertipe ALL club.');
         }
 
         $today    = now()->startOfDay();
@@ -74,10 +83,9 @@ class BookingController extends Controller
             }
         }
 
-        // kapasitas (HITUNG hanya yang aktif & status=1)
+        // kapasitas dihitung dari booking aktif; attendance default belum berangkat.
         $bookedCount = ClassDetail::where('class_schedule_id', $schedule->id)
             ->whereNull('canceled_at')
-            ->where('status', 1) // penting: no-show tidak dihitung mengisi seat lagi (kalau kamu mau begitu)
             ->count();
 
         if ($bookedCount >= (int) $schedule->capacity) {
@@ -85,10 +93,10 @@ class BookingController extends Controller
                 ->with('error', 'Kelas sudah penuh.');
         }
 
-        // simpan booking => status default 1 (berangkat)
+        // simpan booking => attendance default belum berangkat.
         ClassDetail::updateOrCreate(
             ['class_schedule_id' => $schedule->id, 'member_id' => $member->id],
-            ['canceled_at' => null, 'status' => 1]
+            ['canceled_at' => null, 'status' => 0]
         );
 
         return redirect()->to(url()->previous() . '#schedule')
@@ -123,5 +131,41 @@ class BookingController extends Controller
         $booking->update(['canceled_at' => now()]);
 
         return redirect()->to(url()->previous() . '#schedule')->with('success', 'Booking dibatalkan.');
+    }
+
+    private function getEligibleActiveMembership(Member $member, int $branchStoreId): ?object
+    {
+        $leaveDays = DB::table('leave_days')
+            ->select('member_registration_id', DB::raw('COALESCE(SUM(days), 0) as total_days'))
+            ->groupBy('member_registration_id');
+
+        $payments = DB::table('member_registration_payments')
+            ->select('member_registration_id', DB::raw('COALESCE(SUM(value), 0) as payment_summary'))
+            ->groupBy('member_registration_id');
+
+        return DB::table('member_registrations as mbr_reg')
+            ->join('member_packages as mbr_pkg', 'mbr_pkg.id', '=', 'mbr_reg.member_package_id')
+            ->leftJoinSub($leaveDays, 'lds_view', fn ($join) => $join
+                ->on('lds_view.member_registration_id', '=', 'mbr_reg.id'))
+            ->leftJoinSub($payments, 'payments_view', fn ($join) => $join
+                ->on('payments_view.member_registration_id', '=', 'mbr_reg.id'))
+            ->where('mbr_reg.member_id', $member->id)
+            ->where('mbr_reg.days', '>', 1)
+            ->whereRaw('NOW() BETWEEN mbr_reg.start_date AND DATE_ADD(mbr_reg.start_date, INTERVAL (mbr_reg.days + COALESCE(lds_view.total_days, 0)) DAY)')
+            ->whereRaw('COALESCE(payments_view.payment_summary, 0) >= (mbr_reg.package_price + mbr_reg.admin_price)')
+            ->where(function ($query) use ($branchStoreId) {
+                $query->where('mbr_pkg.branch_store_id', $branchStoreId)
+                    ->orWhere('mbr_pkg.is_all_club', 1);
+            })
+            ->select([
+                'mbr_reg.id',
+                'mbr_reg.start_date',
+                'mbr_reg.days',
+                'mbr_pkg.package_name',
+                'mbr_pkg.branch_store_id as member_package_branch_store_id',
+                'mbr_pkg.is_all_club',
+            ])
+            ->orderByDesc('mbr_reg.start_date')
+            ->first();
     }
 }
