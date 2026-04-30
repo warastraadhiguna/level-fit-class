@@ -119,6 +119,13 @@ class BookingController extends Controller
             return redirect()->to(url()->previous() . '#schedule')->with('error', 'Cancel hanya bisa untuk hari ini atau besok.');
         }
 
+        $classStart = Carbon::parse($schedule->class_date.' '.$schedule->time_start);
+        $cancelDeadline = $classStart->copy()->subHours(4);
+
+        if (now()->gte($cancelDeadline)) {
+            return redirect()->to(url()->previous() . '#schedule')->with('error', 'Cancel ditutup. Maksimal 4 jam sebelum kelas dimulai.');
+        }
+
         $booking = ClassDetail::where('class_schedule_id', $schedule->id)
             ->where('member_id', $member->id)
             ->whereNull('canceled_at')

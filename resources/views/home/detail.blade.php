@@ -794,14 +794,22 @@
                                                     ->where('member_id', auth('member')->id())
                                                     ->whereNull('canceled_at')
                                                     ->exists();
+                                                $cancelDeadline = $classStart->copy()->subHours(4);
+                                                $canCancel = now()->lt($cancelDeadline);
                                             @endphp
 
                                             @if($isBooked)
-                                                <form method="POST" action="{{ route('booking.cancel') }}" class="mt-2">
-                                                    @csrf
-                                                    <input type="hidden" name="class_schedule_id" value="{{ $sc->id }}">
-                                                    <button class="btn btn-sm btn-outline-danger w-100" type="submit">Cancel</button>
-                                                </form>
+                                                @if($canCancel)
+                                                    <form method="POST" action="{{ route('booking.cancel') }}" class="mt-2">
+                                                        @csrf
+                                                        <input type="hidden" name="class_schedule_id" value="{{ $sc->id }}">
+                                                        <button class="btn btn-sm btn-outline-danger w-100" type="submit">Cancel</button>
+                                                    </form>
+                                                @else
+                                                    <div class="mt-2 text-muted small">
+                                                        Tidak bisa cancel (< 4 jam)
+                                                    </div>
+                                                @endif
                                             @else
                                                 <form method="POST" action="{{ route('booking.store') }}" class="mt-2">
                                                     @csrf
