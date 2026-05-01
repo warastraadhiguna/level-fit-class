@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
+use Filament\Navigation\NavigationItem;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
@@ -36,6 +37,13 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
+            ->navigationItems([
+                NavigationItem::make('Check In')
+                    ->icon('heroicon-o-check-circle')
+                    ->url(fn () => route('admin.check-in'))
+                    ->isActiveWhen(fn () => request()->routeIs('admin.check-in'))
+                    ->sort(3),
+            ])
             ->pages([
                // Dashboard::class,
             ])
