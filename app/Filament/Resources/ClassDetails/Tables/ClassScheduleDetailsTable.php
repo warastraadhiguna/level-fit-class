@@ -13,6 +13,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class ClassScheduleDetailsTable
 {
@@ -115,6 +116,20 @@ class ClassScheduleDetailsTable
                     ->label('Lihat Booking')
                     ->icon(Heroicon::OutlinedEye)
                     ->url(fn (ClassSchedule $record): string => ClassDetailResource::getUrl('bookings', ['record' => $record])),
+                Action::make('deleteSchedule')
+                    ->label('Hapus')
+                    ->icon(Heroicon::OutlinedTrash)
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Hapus class dari jadwal ini?')
+                    ->modalDescription('Class pada tanggal ini akan dihapus bersama semua data booking/check-in yang terkait.')
+                    ->modalSubmitActionLabel('Ya, hapus')
+                    ->action(function (ClassSchedule $record): void {
+                        DB::transaction(function () use ($record): void {
+                            $record->classDetails()->delete();
+                            $record->delete();
+                        });
+                    }),
             ])
             ->toolbarActions([]);
     }
