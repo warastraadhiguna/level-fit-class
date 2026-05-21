@@ -101,11 +101,8 @@
             gap: 20px;
             scrollbar-width: none; 
 
-            /* KUNCI AGAR CENTER: */
-            width: fit-content;    /* 1. Bungkus menyusut sesuai jumlah kartu */
-            max-width: 100%;       /* 2. Tapi tidak boleh melebihi layar */
-            margin: 0 auto;        /* 3. Posisi bungkus di tengah container */
-            justify-content: flex-start; 
+            width: 100%;
+            justify-content: center;
         }
 
         .cards-wrapper::-webkit-scrollbar {
@@ -121,7 +118,10 @@
         @media (max-width: 768px) {
             .card-item { flex: 0 0 85vw; }
             .slider-container { padding: 0; }
-            .cards-wrapper { padding: 20px 20px 40px 20px; }
+            .cards-wrapper {
+                justify-content: flex-start;
+                padding: 20px 20px 40px 20px;
+            }
         }
 
         .choice-card {
