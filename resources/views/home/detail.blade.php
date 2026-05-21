@@ -734,7 +734,6 @@
                                 $today = now()->copy()->startOfDay();
                                 $tomorrow = now()->copy()->addDay()->startOfDay();
 
-                                $isPast = $cellDate->lt($today);
                                 $isSoon = $cellDate->equalTo($today) || $cellDate->equalTo($tomorrow);
 
                                 $items = $scheduleGrid[$time][$dayNum] ?? [];
@@ -751,10 +750,11 @@
                                     $bookingDeadline = $classStart->copy()->subHour();
 
                                     // status waktu
+                                    $hasClassStarted = now()->gte($classStart);
                                     $canBookNow = now()->lt($bookingDeadline); // masih sebelum deadline
 
                                     $isClassOff = ! (bool) $sc->is_active || ! (bool) ($sc->classSession?->is_active ?? true);
-                                    $pillClass = $isClassOff ? 'pill-off' : ($isPast ? 'pill-past' : ($isSoon ? 'pill-soon' : 'pill-future'));
+                                    $pillClass = $isClassOff ? 'pill-off' : ($hasClassStarted ? 'pill-past' : ($isSoon ? 'pill-soon' : 'pill-future'));
                                     $capacity = (int) $sc->capacity;
                                     $bookedCount = (int) ($sc->booked_count ?? 0);
                                     $remainingQuota = max($capacity - $bookedCount, 0);
@@ -762,6 +762,7 @@
 
                                 <div class="schedule-pill {{ $pillClass }} mb-2">
                                     <div class="fw-bold">{{ $sc->name }}</div>
+
                                     <small class="text-muted">
                                         • {{ \Carbon\Carbon::parse($sc->time_start)->format('H:i') }}–{{ \Carbon\Carbon::parse($sc->time_end)->format('H:i') }}
                                     </small>
@@ -772,7 +773,11 @@
                                         </div>
                                         <div>
                                             <i class="fa-solid fa-ticket me-1"></i>
-                                            Sisa {{ $remainingQuota }} dari {{ $capacity }} quota
+                                            @if($hasClassStarted)
+                                                Total quota: {{ $capacity }}
+                                            @else
+                                                Sisa {{ $remainingQuota }} dari {{ $capacity }} quota
+                                            @endif
                                         </div>
                                     </div>
 
@@ -781,7 +786,7 @@
                                             Kelas libur (tidak bisa dibooking)
                                         </div>
 
-                                    @elseif($isPast)
+                                    @elseif($hasClassStarted)
                                         <div class="mt-2 text-muted small">
                                             Selesai
                                         </div>

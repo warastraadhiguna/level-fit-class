@@ -120,11 +120,14 @@ class ClassScheduleDetailsTable
                     ->label('Hapus')
                     ->icon(Heroicon::OutlinedTrash)
                     ->color('danger')
+                    ->visible(fn (): bool => (bool) auth()->user()?->isAdmin())
                     ->requiresConfirmation()
                     ->modalHeading('Hapus class dari jadwal ini?')
                     ->modalDescription('Class pada tanggal ini akan dihapus bersama semua data booking/check-in yang terkait.')
                     ->modalSubmitActionLabel('Ya, hapus')
                     ->action(function (ClassSchedule $record): void {
+                        abort_unless(auth()->user()?->isAdmin(), 403);
+
                         DB::transaction(function () use ($record): void {
                             $record->classDetails()->delete();
                             $record->delete();
