@@ -39,9 +39,14 @@ class ClassCheckIn extends Component
         }
 
         $bookings = ClassDetail::query()
+            ->with('classSchedule')
             ->where('member_id', $member->id)
             ->whereNull('canceled_at')
-            ->whereHas('classSchedule', fn ($query) => $query->whereDate('class_date', today()))
+            ->whereHas('classSchedule', fn ($query) => $this->scopeTodayClassSchedule($query))
+            ->join('class_schedules as cs_sort', 'cs_sort.id', '=', 'class_details.class_schedule_id')
+            ->orderBy('cs_sort.time_start')
+            ->orderBy('class_details.id')
+            ->select('class_details.*')
             ->get();
 
         if ($bookings->isEmpty()) {
@@ -51,20 +56,46 @@ class ClassCheckIn extends Component
             return;
         }
 
-        $alreadyCheckedIn = $bookings->every(fn (ClassDetail $booking): bool => (int) $booking->status === 1);
+        $now = now();
 
-        $bookings
-            ->where('status', '!=', 1)
-            ->each(fn (ClassDetail $booking) => $booking->update(['status' => 1]));
+        $eligibleBooking = $bookings
+            ->filter(function (ClassDetail $booking) use ($now): bool {
+                if ((int) $booking->status === 1) {
+                    return false;
+                }
+
+                $schedule = $booking->classSchedule;
+
+                if (! $schedule) {
+                    return false;
+                }
+
+                $classEnd = Carbon::parse($schedule->class_date . ' ' . $schedule->time_end);
+
+                return $now->lt($classEnd);
+            })
+            ->first();
 
         $this->checkedMemberName = $member->full_name;
 
-        if ($alreadyCheckedIn) {
-            $this->setMessage("{$member->full_name} sudah check in untuk kelas hari ini.", 'info');
-        } else {
-            $count = $bookings->count();
-            $this->setMessage("Check in berhasil untuk {$member->full_name}. Total booking hari ini: {$count}.", 'success');
+        if (! $eligibleBooking) {
+            $alreadyCheckedIn = $bookings->every(fn (ClassDetail $booking): bool => (int) $booking->status === 1);
+
+            $message = $alreadyCheckedIn
+                ? "{$member->full_name} sudah check in untuk semua kelas hari ini."
+                : "{$member->full_name} tidak punya kelas hari ini yang masih bisa check in.";
+
+            $this->setMessage($message, 'info');
+            $this->reset('cardNumber');
+            return;
         }
+
+        $eligibleBooking->update(['status' => 1]);
+
+        $schedule = $eligibleBooking->classSchedule;
+        $time = $schedule?->time_start ? Carbon::parse($schedule->time_start)->format('H:i') : '--:--';
+
+        $this->setMessage("Check in berhasil untuk {$member->full_name}: {$schedule?->name} jam {$time}.", 'success');
 
         $this->reset('cardNumber');
     }
@@ -74,7 +105,7 @@ class ClassCheckIn extends Component
         $booking = ClassDetail::query()
             ->whereKey($classDetailId)
             ->whereNull('canceled_at')
-            ->whereHas('classSchedule', fn ($query) => $query->whereDate('class_date', today()))
+            ->whereHas('classSchedule', fn ($query) => $this->scopeTodayClassSchedule($query))
             ->first();
 
         if (! $booking) {
@@ -91,7 +122,7 @@ class ClassCheckIn extends Component
         $booking = ClassDetail::query()
             ->whereKey($classDetailId)
             ->whereNull('canceled_at')
-            ->whereHas('classSchedule', fn ($query) => $query->whereDate('class_date', today()))
+            ->whereHas('classSchedule', fn ($query) => $this->scopeTodayClassSchedule($query))
             ->first();
 
         if (! $booking) {
@@ -108,7 +139,7 @@ class ClassCheckIn extends Component
         return ClassDetail::query()
             ->with(['member', 'classSchedule.classInstructor', 'classSchedule.branchStore'])
             ->whereNull('canceled_at')
-            ->whereHas('classSchedule', fn ($query) => $query->whereDate('class_date', today()))
+            ->whereHas('classSchedule', fn ($query) => $this->scopeTodayClassSchedule($query))
             ->join('class_schedules as cs_sort', 'cs_sort.id', '=', 'class_details.class_schedule_id')
             ->orderBy('cs_sort.time_start')
             ->orderBy('class_details.status')
@@ -128,11 +159,35 @@ class ClassCheckIn extends Component
         ];
     }
 
+    public function getClassSummariesProperty(): Collection
+    {
+        return $this->todayBookings
+            ->groupBy('class_schedule_id')
+            ->map(function (Collection $bookings): array {
+                $firstBooking = $bookings->first();
+                $schedule = $firstBooking?->classSchedule;
+
+                return [
+                    'key' => (string) ($schedule?->id ?? $firstBooking?->class_schedule_id ?? $firstBooking?->id),
+                    'name' => $schedule?->name ?? '-',
+                    'branch' => $schedule?->branchStore?->name ?? '-',
+                    'time_start' => $schedule?->time_start ? Carbon::parse($schedule->time_start)->format('H:i') : '--:--',
+                    'time_end' => $schedule?->time_end ? Carbon::parse($schedule->time_end)->format('H:i') : '--:--',
+                    'total' => $bookings->count(),
+                    'present' => $bookings->where('status', 1)->count(),
+                    'absent' => $bookings->where('status', '!=', 1)->count(),
+                ];
+            })
+            ->sortBy('time_start')
+            ->values();
+    }
+
     public function render()
     {
         return view('livewire.class-check-in', [
             'bookings' => $this->todayBookings,
             'summary' => $this->summary,
+            'classSummaries' => $this->classSummaries,
             'todayLabel' => Carbon::today()->locale('id')->isoFormat('dddd, D MMMM Y'),
         ])->title('Check In Kelas');
     }
@@ -141,5 +196,19 @@ class ClassCheckIn extends Component
     {
         $this->message = $message;
         $this->messageType = $type;
+    }
+
+    private function getUserBranchStoreId(): ?int
+    {
+        $branchStoreId = auth()->user()?->branch_store_id;
+
+        return filled($branchStoreId) ? (int) $branchStoreId : null;
+    }
+
+    private function scopeTodayClassSchedule($query)
+    {
+        return $query
+            ->whereDate('class_date', today())
+            ->when($this->getUserBranchStoreId(), fn ($query, int $branchStoreId) => $query->where('branch_store_id', $branchStoreId));
     }
 }

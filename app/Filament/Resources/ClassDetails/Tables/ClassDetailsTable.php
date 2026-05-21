@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ClassDetails\Tables;
 
+use App\Filament\Resources\ClassDetails\ClassDetailResource;
 use App\Models\ClassSchedule;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
@@ -112,6 +113,7 @@ class ClassDetailsTable
                 ->preload()
                 ->options(fn () => ClassSchedule::query()
                     ->with(['branchStore', 'classSession'])
+                    ->when(ClassDetailResource::getUserBranchStoreId(), fn (Builder $query, int $branchStoreId) => $query->where('branch_store_id', $branchStoreId))
                     ->orderByDesc('class_date')
                     ->orderBy('time_start')
                     ->limit(200)

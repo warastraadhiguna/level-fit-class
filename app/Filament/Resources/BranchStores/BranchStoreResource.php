@@ -13,6 +13,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class BranchStoreResource extends Resource
 {
@@ -28,6 +30,26 @@ class BranchStoreResource extends Resource
     public static function table(Table $table): Table
     {
         return BranchStoresTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->when(static::getUserBranchStoreId(), fn (Builder $query, int $branchStoreId) => $query->whereKey($branchStoreId));
+    }
+
+    public static function getUserBranchStoreId(): ?int
+    {
+        $branchStoreId = auth()->user()?->branch_store_id;
+
+        return filled($branchStoreId) ? (int) $branchStoreId : null;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        $branchStoreId = static::getUserBranchStoreId();
+
+        return blank($branchStoreId) || (int) $record->getKey() === $branchStoreId;
     }
 
     public static function getRelations(): array

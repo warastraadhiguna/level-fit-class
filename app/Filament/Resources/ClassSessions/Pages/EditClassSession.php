@@ -10,6 +10,15 @@ class EditClassSession extends EditRecord
 {
     protected static string $resource = ClassSessionResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if ($branchStoreId = ClassSessionResource::getUserBranchStoreId()) {
+            $data['branch_store_id'] = $branchStoreId;
+        }
+
+        return $data;
+    }
+
     protected function getRedirectUrl(): string
     {
         // Redirect ke halaman index setelah create

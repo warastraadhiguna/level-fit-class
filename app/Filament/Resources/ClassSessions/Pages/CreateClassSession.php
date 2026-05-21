@@ -8,6 +8,16 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateClassSession extends CreateRecord
 {
     protected static string $resource = ClassSessionResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        if ($branchStoreId = ClassSessionResource::getUserBranchStoreId()) {
+            $data['branch_store_id'] = $branchStoreId;
+        }
+
+        return $data;
+    }
+
     protected function getFormActions(): array
     {
         return [

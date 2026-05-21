@@ -30,6 +30,11 @@
             overflow-x: hidden;
         }
 
+        .container {
+            width: calc(100% - 32px);
+            max-width: 1680px;
+        }
+
         /* Background Image */
         .bg-container {
             position: fixed;
@@ -79,8 +84,8 @@
         .slider-container {
             position: relative;
             width: 100%;
-            max-width: 1200px;
-            padding: 0 40px; 
+            max-width: 1680px;
+            padding: 0 16px; 
             margin-bottom: 2rem;
             z-index: 2;
         }

@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class ClassSessionResource extends Resource
@@ -33,6 +34,26 @@ class ClassSessionResource extends Resource
         return ClassSessionsTable::configure($table);
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->when(static::getUserBranchStoreId(), fn (Builder $query, int $branchStoreId) => $query->where('branch_store_id', $branchStoreId));
+    }
+
+    public static function getUserBranchStoreId(): ?int
+    {
+        $branchStoreId = auth()->user()?->branch_store_id;
+
+        return filled($branchStoreId) ? (int) $branchStoreId : null;
+    }
+
+    public static function belongsToUserBranch(Model $record): bool
+    {
+        $branchStoreId = static::getUserBranchStoreId();
+
+        return blank($branchStoreId) || (int) $record->branch_store_id === $branchStoreId;
+    }
+
     public static function isAdmin(): bool
     {
         return (bool) auth()->user()?->isAdmin();
@@ -45,12 +66,12 @@ class ClassSessionResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return static::isAdmin();
+        return static::isAdmin() && static::belongsToUserBranch($record);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return static::isAdmin();
+        return static::isAdmin() && static::belongsToUserBranch($record);
     }
 
     public static function canDeleteAny(): bool
@@ -60,7 +81,7 @@ class ClassSessionResource extends Resource
 
     public static function canForceDelete(Model $record): bool
     {
-        return static::isAdmin();
+        return static::isAdmin() && static::belongsToUserBranch($record);
     }
 
     public static function canForceDeleteAny(): bool
@@ -70,7 +91,7 @@ class ClassSessionResource extends Resource
 
     public static function canRestore(Model $record): bool
     {
-        return static::isAdmin();
+        return static::isAdmin() && static::belongsToUserBranch($record);
     }
 
     public static function canRestoreAny(): bool

@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class ClassDetailResource extends Resource
@@ -35,6 +36,26 @@ class ClassDetailResource extends Resource
         return ClassScheduleDetailsTable::configure($table);
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->when(static::getUserBranchStoreId(), fn (Builder $query, int $branchStoreId) => $query->where('branch_store_id', $branchStoreId));
+    }
+
+    public static function getUserBranchStoreId(): ?int
+    {
+        $branchStoreId = auth()->user()?->branch_store_id;
+
+        return filled($branchStoreId) ? (int) $branchStoreId : null;
+    }
+
+    public static function belongsToUserBranch(Model $record): bool
+    {
+        $branchStoreId = static::getUserBranchStoreId();
+
+        return blank($branchStoreId) || (int) $record->branch_store_id === $branchStoreId;
+    }
+
     public static function canCreate(): bool
     {
         return false;
@@ -43,6 +64,11 @@ class ClassDetailResource extends Resource
     public static function canEdit(Model $record): bool
     {
         return false;
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return static::belongsToUserBranch($record);
     }
 
     public static function getRelations(): array

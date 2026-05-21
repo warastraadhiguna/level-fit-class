@@ -32,6 +32,17 @@
             padding-top: 80px; 
         }
 
+        .container {
+            width: calc(100% - 32px);
+            max-width: 1680px;
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                width: calc(100% - 20px);
+            }
+        }
+
         /* --- Navbar Custom --- */
         .navbar {
             background-color: rgba(255, 255, 255, 0.98); /* Lebih solid */

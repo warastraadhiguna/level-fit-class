@@ -56,9 +56,16 @@
         .nav a:hover { color: var(--text); }
 
         .page {
-            max-width: 1180px;
+            width: calc(100% - 32px);
+            max-width: 1680px;
             margin: 0 auto;
-            padding: 28px 20px 40px;
+            padding: 28px 0 40px;
+        }
+
+        @media (max-width: 640px) {
+            .page {
+                width: calc(100% - 20px);
+            }
         }
 
         .card {

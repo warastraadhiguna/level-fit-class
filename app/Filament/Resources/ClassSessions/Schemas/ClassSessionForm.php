@@ -20,13 +20,16 @@ class ClassSessionForm
                 Select::make('branch_store_id')
                     ->label('Branch')
                     ->options(
-                        fn () =>
-                        BranchStore::query()
+                        fn () => BranchStore::query()
+                            ->when(auth()->user()?->branch_store_id, fn ($query, $branchStoreId) => $query->whereKey($branchStoreId))
                             ->get()
                             ->mapWithKeys(fn ($s) => [
                                 $s->id => $s->name ?? '—',
                             ])
                     )
+                    ->default(fn () => auth()->user()?->branch_store_id)
+                    ->disabled(fn () => filled(auth()->user()?->branch_store_id))
+                    ->dehydrated()
                     ->searchable()
                     ->preload()   // opsional, kalau datanya kecil
                     ->required(),                  

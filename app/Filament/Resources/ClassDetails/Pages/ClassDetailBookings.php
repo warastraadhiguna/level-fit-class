@@ -22,6 +22,13 @@ class ClassDetailBookings extends ManageRelatedRecords
 
     protected static bool $shouldSkipAuthorization = true;
 
+    protected function authorizeAccess(): void
+    {
+        parent::authorizeAccess();
+
+        abort_unless(ClassDetailResource::belongsToUserBranch($this->getRecord()), 403);
+    }
+
     public function getTitle(): string | Htmlable
     {
         $record = $this->getRecord();

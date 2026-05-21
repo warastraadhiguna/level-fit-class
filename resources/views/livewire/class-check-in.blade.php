@@ -58,6 +58,43 @@
         </div>
     </section>
 
+    <section style="margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:10px;">
+            <div style="font-weight:800;">Ringkasan Per Class</div>
+            <div class="muted" style="font-size:13px;">Total booking, sudah check in, dan belum berangkat hari ini</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+            @forelse($classSummaries as $classSummary)
+                <div class="card" wire:key="class-summary-{{ $classSummary['key'] }}" style="padding:16px;">
+                    <div style="font-weight:800; margin-bottom:3px;">{{ $classSummary['name'] }}</div>
+                    <div class="muted" style="font-size:12px; margin-bottom:12px;">
+                        {{ $classSummary['time_start'] }} - {{ $classSummary['time_end'] }} · {{ $classSummary['branch'] }}
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px;">
+                        <div>
+                            <div class="muted" style="font-size:12px;">Booking</div>
+                            <div style="font-size:24px; font-weight:800;">{{ $classSummary['total'] }}</div>
+                        </div>
+                        <div>
+                            <div class="muted" style="font-size:12px;">Sudah Check In</div>
+                            <div style="font-size:24px; font-weight:800; color:var(--success);">{{ $classSummary['present'] }}</div>
+                        </div>
+                        <div>
+                            <div class="muted" style="font-size:12px;">Belum Berangkat</div>
+                            <div style="font-size:24px; font-weight:800; color:var(--warning);">{{ $classSummary['absent'] }}</div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="card" style="padding:18px; color:var(--muted);">
+                    Belum ada booking kelas hari ini.
+                </div>
+            @endforelse
+        </div>
+    </section>
+
     <section class="card" style="overflow:hidden;">
         <div style="padding:16px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:12px;">
             <div style="font-weight:800;">Booking Hari Ini</div>
