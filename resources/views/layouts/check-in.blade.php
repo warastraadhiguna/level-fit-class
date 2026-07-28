@@ -117,6 +117,23 @@
         }
 
         .muted { color: var(--muted); }
+
+        .qr-scanner-dialog {
+            border: 0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+        }
+
+        .qr-scanner-dialog::backdrop {
+            background: rgba(17, 24, 39, .7);
+        }
+
+        @media (max-width: 720px) {
+            #admin-class-check-in-form {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body>

@@ -8,7 +8,7 @@
     </div>
 
     <section class="card" style="padding:20px; margin-bottom:18px;">
-        <form wire:submit="checkIn" style="display:grid; grid-template-columns: minmax(240px, 1fr) auto; gap:12px; align-items:end;">
+        <form id="admin-class-check-in-form" wire:submit="checkIn" style="display:grid; grid-template-columns: minmax(240px, 1fr) auto auto; gap:12px; align-items:end;">
             <div>
                 <label for="cardNumber" style="display:block; font-size:13px; font-weight:700; margin-bottom:8px;">Card Number</label>
                 <input
@@ -23,6 +23,9 @@
             </div>
             <button class="btn btn-success btn-check-in" type="submit" wire:loading.attr="disabled">
                 Check In
+            </button>
+            <button class="btn" id="open-admin-class-qr-scanner" type="button">
+                Scan QR
             </button>
         </form>
 
@@ -42,6 +45,28 @@
             </div>
         @endif
     </section>
+
+    <dialog id="admin-class-qr-dialog" class="qr-scanner-dialog">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:16px;">
+            <div>
+                <div style="font-size:20px; font-weight:800;">Scan QR Card Member</div>
+                <div class="muted" style="font-size:13px;">QR berisi card number member</div>
+            </div>
+            <button id="close-admin-class-qr-scanner" type="button" class="btn btn-danger btn-small">Tutup</button>
+        </div>
+        <div id="admin-class-qr-reader" wire:ignore style="width:min(420px, 82vw);"></div>
+        <div id="admin-class-qr-status" class="muted" style="margin-top:12px; text-align:center;">
+            Tekan Mulai Scan untuk mengaktifkan kamera.
+        </div>
+        <div style="display:flex; justify-content:center; gap:8px; margin-top:14px;">
+            <button id="start-admin-class-qr-scanner" type="button" class="btn btn-success">Mulai Scan</button>
+            <button id="stop-admin-class-qr-scanner" type="button" class="btn" hidden>Hentikan Kamera</button>
+        </div>
+        <div style="margin-top:14px;">
+            <label for="admin-class-qr-image" class="muted" style="display:block; font-size:13px; margin-bottom:6px;">Atau pilih gambar QR</label>
+            <input id="admin-class-qr-image" class="input" type="file" accept="image/*">
+        </div>
+    </dialog>
 
     <section style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:18px;">
         <div class="card" style="padding:16px;">
@@ -160,3 +185,96 @@
         </div>
     </section>
 </main>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+    function initializeAdminClassQrScanner() {
+        const dialog = document.getElementById('admin-class-qr-dialog');
+        if (!dialog || dialog.dataset.scannerInitialized === 'true') return;
+        dialog.dataset.scannerInitialized = 'true';
+
+        const openButton = document.getElementById('open-admin-class-qr-scanner');
+        const closeButton = document.getElementById('close-admin-class-qr-scanner');
+        const startButton = document.getElementById('start-admin-class-qr-scanner');
+        const stopButton = document.getElementById('stop-admin-class-qr-scanner');
+        const imageInput = document.getElementById('admin-class-qr-image');
+        const status = document.getElementById('admin-class-qr-status');
+        const cardInput = document.getElementById('cardNumber');
+        const form = document.getElementById('admin-class-check-in-form');
+        const scanner = new Html5Qrcode('admin-class-qr-reader');
+        let isRunning = false;
+        let isSubmitting = false;
+
+        function submitCardNumber(decodedText) {
+            const cardNumber = decodedText.trim();
+            if (!cardNumber || isSubmitting) return;
+
+            isSubmitting = true;
+            cardInput.value = cardNumber;
+            cardInput.dispatchEvent(new Event('input', { bubbles: true }));
+            status.textContent = 'QR ditemukan. Memproses kehadiran...';
+
+            const submit = function() {
+                dialog.close();
+                form.requestSubmit();
+            };
+
+            if (isRunning) scanner.stop().then(submit).catch(submit);
+            else submit();
+        }
+
+        async function stopScanner() {
+            if (isRunning) await scanner.stop().catch(function() {});
+            isRunning = false;
+            startButton.hidden = false;
+            startButton.disabled = false;
+            stopButton.hidden = true;
+        }
+
+        openButton.addEventListener('click', function() {
+            isSubmitting = false;
+            dialog.showModal();
+        });
+
+        closeButton.addEventListener('click', async function() {
+            await stopScanner();
+            dialog.close();
+        });
+
+        startButton.addEventListener('click', async function() {
+            startButton.disabled = true;
+            status.textContent = 'Meminta izin kamera...';
+            try {
+                await scanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    submitCardNumber,
+                    function() {}
+                );
+                isRunning = true;
+                startButton.hidden = true;
+                stopButton.hidden = false;
+                status.textContent = 'Kamera aktif. Arahkan ke QR card member.';
+            } catch (error) {
+                startButton.disabled = false;
+                status.textContent = 'Kamera tidak dapat dibuka. Periksa izin kamera atau pilih gambar QR.';
+            }
+        });
+
+        stopButton.addEventListener('click', stopScanner);
+
+        imageInput.addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                await stopScanner();
+                submitCardNumber(await scanner.scanFile(file, true));
+            } catch (error) {
+                status.textContent = 'QR tidak ditemukan pada gambar.';
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeAdminClassQrScanner);
+    document.addEventListener('livewire:navigated', initializeAdminClassQrScanner);
+</script>
