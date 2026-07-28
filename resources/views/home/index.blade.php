@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config('app.name') }} - Pilih Cabang</title>
-    <link rel="icon" type="image/x-icon" href="{{ asset('storage/' . $branchStores[0]->logo) }}">        
+    <link rel="icon" href="{{ $branchStores->first()?->favicon_url ?? asset('favicon.ico') }}">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -157,6 +157,15 @@
             margin-top: 1rem;
         }
 
+        .branch-logo {
+            display: block;
+            width: auto;
+            max-width: 200px;
+            height: 72px;
+            object-fit: contain;
+            margin: 0 auto 1rem;
+        }
+
         .choice-card p {
             color: #aaa;
             font-size: 0.9rem;
@@ -305,7 +314,14 @@
                 <!-- Ini mensimulasikan jika database Anda mengembalikan 2 cabang -->
                 @foreach($branchStores as $branchStore)
                     <div class="card-item">
-                        <div class="choice-card" onclick="visitGym('{{ $branchStore->slug }}')">                            
+                        <div class="choice-card" onclick="visitGym('{{ $branchStore->slug }}')">
+                            @if ($branchStore->logo_url)
+                                <img
+                                    src="{{ $branchStore->logo_url }}"
+                                    alt="{{ $branchStore->name }}"
+                                    class="branch-logo"
+                                >
+                            @endif
                             <h2>{{ $branchStore->name }}</h2>
                             <div class="branch-meta">
                                 <div class="meta-row">

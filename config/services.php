@@ -39,4 +39,8 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
+
+    'level_fit_master' => [
+        'url' => rtrim(env('LEVEL_FIT_MASTER_URL', 'http://localhost:8000'), '/'),
+    ],
 ];

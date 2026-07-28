@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $branchStore->name }} | {{ config('app.name') }}</title>
-    <link rel="icon" type="image/x-icon" href="{{ asset('storage/' . $branchStore->logo) }}">    
+    <link rel="icon" href="{{ $branchStore->favicon_url }}">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
@@ -53,7 +53,11 @@
         }
 
         .navbar-brand img {
-            max-height: 50px; /* Sesuaikan ukuran logo */
+            display: block;
+            width: auto;
+            max-width: 220px;
+            height: 54px;
+            object-fit: contain;
         }
 
         .nav-link {
@@ -517,7 +521,11 @@
         <div class="container">
             <a class="navbar-brand" href="#">
                 <!-- Menggunakan logo yang diupload user -->
-                <img src="{{ asset('storage/' . $branchStore->logo) }}" alt="{{ $branchStore->name }}" style="border-radius: 4px;">
+                @if ($branchStore->logo_url)
+                    <img src="{{ $branchStore->logo_url }}" alt="{{ $branchStore->name }}">
+                @else
+                    <span class="fw-bold">{{ $branchStore->name }}</span>
+                @endif
             </a>          
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>

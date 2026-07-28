@@ -9,6 +9,12 @@ use Illuminate\Support\Str;
 class BranchStore extends Model
 {
     use HasFactory;
+
+    protected $appends = [
+        'logo_url',
+        'favicon_url',
+    ];
+
     protected $fillable = [
         'name',
         'slug',
@@ -18,6 +24,46 @@ class BranchStore extends Model
         'email',
         'logo'
     ];    
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        if ($this->admin_logo) {
+            return $this->resolveMasterMediaUrl($this->admin_logo);
+        }
+
+        if (!$this->logo) {
+            return null;
+        }
+
+        if (Str::startsWith($this->logo, ['http://', 'https://'])) {
+            return $this->logo;
+        }
+
+        return Storage::disk('public')->url(
+            Str::after(ltrim($this->logo, '/'), 'storage/')
+        );
+    }
+
+    public function getFaviconUrlAttribute(): string
+    {
+        return $this->logo_url
+            ?? config('services.level_fit_master.url').'/admingym/images/gym/fav-icon.png';
+    }
+
+    private function resolveMasterMediaUrl(string $path): string
+    {
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (!Str::startsWith($path, 'storage/')) {
+            $path = 'storage/'.$path;
+        }
+
+        return config('services.level_fit_master.url').'/'.$path;
+    }
 
     public function classSession()
     {
