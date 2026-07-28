@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Level FIT- Pilih Cabang</title>
+    <title>{{ config('app.name') }} - Pilih Cabang</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('storage/' . $branchStores[0]->logo) }}">        
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -282,7 +282,7 @@
     <div class="main-wrapper">
         
         <div class="container text-center main-header">
-            <h1 class="header-title">LEVEL <span style="color: var(--primary-color);">FIT</span></h1>
+            <h1 class="header-title">{{ config('app.name') }}</h1>
             <p class="lead text-light">Pilih lokasi gym terdekat Anda</p>
         </div>
 
@@ -327,7 +327,7 @@
     </div>
 
     <footer>
-        <p>&copy; 2026 LEVEL FIT. All Rights Reserved.</p>
+        <p>&copy; 2026 {{ config('app.name') }}. All Rights Reserved.</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

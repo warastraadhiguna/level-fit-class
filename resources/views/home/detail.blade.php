@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $branchStore->name }}</title>
+    <title>{{ $branchStore->name }} | {{ config('app.name') }}</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('storage/' . $branchStore->logo) }}">    
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -995,7 +995,7 @@
             </div>
             <hr class="border-secondary mt-4">
             <div class="text-center pt-2">
-                <small>&copy; 2026 LEVELFIT. All rights reserved.</small>
+                <small>&copy; 2026 {{ config('app.name') }}. All rights reserved.</small>
             </div>
         </div>
     </footer>

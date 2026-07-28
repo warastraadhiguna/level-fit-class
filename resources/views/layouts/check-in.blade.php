@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? 'Check In Kelas' }}</title>
+    <title>{{ isset($title) ? $title . ' | ' . config('app.name') : config('app.name') }}</title>
     @livewireStyles
     <style>
         :root {
@@ -138,7 +138,7 @@
 </head>
 <body>
     <header class="topbar">
-        <div class="brand">Level Fit Admin</div>
+        <div class="brand">{{ config('app.name') }} Admin</div>
         <nav class="nav">
             <a href="{{ url('/admin/check-in') }}">Check In</a>
             <a href="{{ url('/admin/class-details') }}">Class Details</a>

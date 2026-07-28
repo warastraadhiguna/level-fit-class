@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Card Member - Level FIT</title>
+    <title>QR Card Member | {{ config('app.name') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -35,7 +35,7 @@
                 <p class="text-secondary small mt-3 mb-0">QR ini berisi card number member Anda.</p>
             @else
                 <div class="alert alert-warning mt-4 mb-0">
-                    Card number belum tersedia. Silakan hubungi resepsionis Level FIT.
+                    Card number belum tersedia. Silakan hubungi resepsionis {{ config('app.name') }}.
                 </div>
             @endif
         </div>
