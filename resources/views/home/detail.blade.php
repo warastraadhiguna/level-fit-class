@@ -538,13 +538,8 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="{{ route('member.check-in.scanner') }}?return_to={{ urlencode('/' . $branchStore->slug) }}">
-                                        <i class="fa-solid fa-qrcode me-2"></i>Membership Check In/Out
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('member.trainer-session-check-in.scanner') }}?return_to={{ urlencode('/' . $branchStore->slug) }}">
-                                        <i class="fa-solid fa-dumbbell me-2"></i>Trainer Session Check In/Out
+                                    <a class="dropdown-item" href="{{ route('member.card-qr') }}?return_to={{ urlencode('/' . $branchStore->slug) }}">
+                                        <i class="fa-solid fa-qrcode me-2"></i>QR Card Member
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>

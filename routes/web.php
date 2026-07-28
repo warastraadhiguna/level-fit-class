@@ -26,10 +26,7 @@ Route::post('/logout', [MemberAuthController::class, 'logout'])->name('member.lo
 Route::middleware('auth:member')->group(function () {
     Route::post('/booking', [BookingController::class, 'store'])->name('booking.store');
     Route::post('/booking/cancel', [BookingController::class, 'cancel'])->name('booking.cancel');
-    Route::get('/member/check-in', [MemberCheckInController::class, 'scanner'])->name('member.check-in.scanner');
-    Route::post('/member/check-in', [MemberCheckInController::class, 'toggle'])->name('member.check-in.toggle');
-    Route::get('/member/trainer-session-check-in', [MemberCheckInController::class, 'trainerSessionScanner'])->name('member.trainer-session-check-in.scanner');
-    Route::post('/member/trainer-session-check-in', [MemberCheckInController::class, 'toggleTrainerSession'])->name('member.trainer-session-check-in.toggle');
+    Route::get('/member/card-qr', [MemberCheckInController::class, 'cardQr'])->name('member.card-qr');
 });
 
 Route::get('/{slug}', [HomeController::class, "detail"]);

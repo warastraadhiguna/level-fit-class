@@ -2,11 +2,6 @@
 
 return [
 
-    'level_fit_admin' => [
-        'url' => env('LEVEL_FIT_ADMIN_URL', 'http://localhost:8000'),
-        'qr_check_in_secret' => env('QR_CHECK_IN_SHARED_SECRET'),
-    ],
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
