@@ -186,13 +186,14 @@
     </section>
 </main>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script>
-    function initializeAdminClassQrScanner() {
-        const dialog = document.getElementById('admin-class-qr-dialog');
-        if (!dialog || dialog.dataset.scannerInitialized === 'true') return;
-        dialog.dataset.scannerInitialized = 'true';
+@assets
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+@endassets
 
+@script
+<script>
+    {
+        const dialog = document.getElementById('admin-class-qr-dialog');
         const openButton = document.getElementById('open-admin-class-qr-scanner');
         const closeButton = document.getElementById('close-admin-class-qr-scanner');
         const startButton = document.getElementById('start-admin-class-qr-scanner');
@@ -200,31 +201,48 @@
         const imageInput = document.getElementById('admin-class-qr-image');
         const status = document.getElementById('admin-class-qr-status');
         const cardInput = document.getElementById('cardNumber');
-        const form = document.getElementById('admin-class-check-in-form');
-        const scanner = new Html5Qrcode('admin-class-qr-reader');
+        let scanner = null;
         let isRunning = false;
         let isSubmitting = false;
 
-        function submitCardNumber(decodedText) {
-            const cardNumber = decodedText.trim();
+        function getScanner() {
+            if (scanner) return scanner;
+
+            if (typeof window.Html5Qrcode === 'undefined') {
+                throw new Error('Library QR scanner gagal dimuat.');
+            }
+
+            scanner = new window.Html5Qrcode('admin-class-qr-reader');
+
+            return scanner;
+        }
+
+        async function submitCardNumber(decodedText) {
+            const cardNumber = String(decodedText ?? '').trim();
             if (!cardNumber || isSubmitting) return;
 
             isSubmitting = true;
             cardInput.value = cardNumber;
             cardInput.dispatchEvent(new Event('input', { bubbles: true }));
             status.textContent = 'QR ditemukan. Memproses kehadiran...';
+            status.style.color = 'var(--success)';
 
-            const submit = function() {
-                dialog.close();
-                form.requestSubmit();
-            };
+            await stopScanner();
+            dialog.close();
 
-            if (isRunning) scanner.stop().then(submit).catch(submit);
-            else submit();
+            try {
+                await $wire.$set('cardNumber', cardNumber, false);
+                await $wire.checkIn();
+            } finally {
+                isSubmitting = false;
+            }
         }
 
         async function stopScanner() {
-            if (isRunning) await scanner.stop().catch(function() {});
+            if (scanner && isRunning) {
+                await scanner.stop().catch(function() {});
+            }
+
             isRunning = false;
             startButton.hidden = false;
             startButton.disabled = false;
@@ -233,6 +251,8 @@
 
         openButton.addEventListener('click', function() {
             isSubmitting = false;
+            status.textContent = 'Tekan Mulai Scan untuk mengaktifkan kamera.';
+            status.style.color = '';
             dialog.showModal();
         });
 
@@ -244,8 +264,12 @@
         startButton.addEventListener('click', async function() {
             startButton.disabled = true;
             status.textContent = 'Meminta izin kamera...';
+            status.style.color = '';
+
             try {
-                await scanner.start(
+                const qrScanner = getScanner();
+
+                await qrScanner.start(
                     { facingMode: 'environment' },
                     { fps: 10, qrbox: { width: 250, height: 250 } },
                     submitCardNumber,
@@ -257,7 +281,10 @@
                 status.textContent = 'Kamera aktif. Arahkan ke QR card member.';
             } catch (error) {
                 startButton.disabled = false;
-                status.textContent = 'Kamera tidak dapat dibuka. Periksa izin kamera atau pilih gambar QR.';
+                status.style.color = 'var(--danger)';
+                status.textContent = error?.message?.includes('Library QR')
+                    ? 'QR scanner gagal dimuat. Muat ulang halaman lalu coba kembali.'
+                    : 'Kamera tidak dapat dibuka. Pastikan izin kamera aktif dan halaman menggunakan HTTPS.';
             }
         });
 
@@ -266,15 +293,20 @@
         imageInput.addEventListener('change', async function(event) {
             const file = event.target.files[0];
             if (!file) return;
+
             try {
                 await stopScanner();
-                submitCardNumber(await scanner.scanFile(file, true));
+                const qrScanner = getScanner();
+                await submitCardNumber(await qrScanner.scanFile(file, true));
             } catch (error) {
+                status.style.color = 'var(--danger)';
                 status.textContent = 'QR tidak ditemukan pada gambar.';
+            } finally {
+                imageInput.value = '';
             }
         });
-    }
 
-    document.addEventListener('DOMContentLoaded', initializeAdminClassQrScanner);
-    document.addEventListener('livewire:navigated', initializeAdminClassQrScanner);
+        dialog.addEventListener('cancel', stopScanner);
+    }
 </script>
+@endscript
