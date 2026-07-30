@@ -10,6 +10,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable  implements FilamentUser, HasName
 {
@@ -55,7 +56,7 @@ class User extends Authenticatable  implements FilamentUser, HasName
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true; // nanti bisa kamu batasi role/admin
+        return $this->isAdmin() && $this->hasApplicationAccess('gym_landing');
     }
 
     public function getFilamentName(): string
@@ -67,5 +68,22 @@ class User extends Authenticatable  implements FilamentUser, HasName
     public function isAdmin(): bool
     {
         return strtoupper((string) $this->role) === 'ADMIN';
+    }
+
+    public function applicationAccesses()
+    {
+        return $this->hasMany(UserApplicationAccess::class);
+    }
+
+    public function hasApplicationAccess(string $applicationCode): bool
+    {
+        if (!Schema::hasTable('user_application_access')) {
+            return true;
+        }
+
+        return $this->applicationAccesses()
+            ->where('application_code', $applicationCode)
+            ->where('is_active', true)
+            ->exists();
     }
 }
