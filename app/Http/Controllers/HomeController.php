@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BranchStore;
 use App\Models\ClassSchedule;
 use App\Models\ClassSession;
+use App\Services\ClassSessionScheduleSynchronizer;
 use Carbon\Carbon;
 
 class HomeController extends Controller
@@ -18,6 +19,9 @@ class HomeController extends Controller
     public function detail($slug)
     {
         $branchStore = BranchStore::where('slug', $slug)->firstOrFail();
+
+        app(ClassSessionScheduleSynchronizer::class)
+            ->reconcileFutureSchedulesForBranch((int) $branchStore->id);
 
         // 1) Tentukan tanggal "base"
         // - Jika hari ini Sabtu/Minggu => base = hari ini
@@ -133,19 +137,24 @@ class HomeController extends Controller
                 ]
             );
 
-            if (! $schedule->exists) {
+            if (! $schedule->exists || ! $schedule->classDetails()->exists()) {
                 $schedule->fill([
                     'branch_store_id' => $branchStoreId,
                     'class_instructor_id' => $s->class_instructor_id ?? null,
                     'name' => $s->name,
+                    'note' => $s->note,
                     'price' => $s->price,
                     'capacity' => $s->capacity,
                     'time_start' => $s->time_start,
                     'time_end' => $s->time_end,
+                    'is_active' => (bool) $s->is_active,
                 ]);
             }
 
-            $schedule->is_active = (bool) $s->is_active;
+            if (! $s->is_active) {
+                $schedule->is_active = false;
+            }
+
             $schedule->save();
         }
     }

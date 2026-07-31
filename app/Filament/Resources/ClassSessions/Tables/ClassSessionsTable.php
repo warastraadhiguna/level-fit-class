@@ -75,10 +75,12 @@ class ClassSessionsTable
                 EditAction::make()
                     ->visible(fn () => ClassSessionResource::isAdmin()),
                 DeleteAction::make()
+                    ->modalDescription('Jadwal hari ini dan masa depan tanpa booking akan dihapus. Jadwal yang sudah memiliki booking akan dinonaktifkan agar histori member tetap aman.')
                     ->visible(fn ($record) => ClassSessionResource::isAdmin() && ! $record->trashed()),
                 RestoreAction::make()
                     ->visible(fn ($record) => ClassSessionResource::isAdmin() && $record->trashed()),
                 ForceDeleteAction::make()
+                    ->modalDescription('Session akan dihapus permanen. Schedule tanpa booking ikut dihapus, sedangkan histori yang memiliki booking tetap disimpan tanpa referensi ke session ini.')
                     ->visible(fn ($record) => ClassSessionResource::isAdmin() && $record->trashed()),
             ])
             ->toolbarActions([
